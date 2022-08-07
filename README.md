@@ -67,3 +67,48 @@ class ViewControllerTests: XCTestCase {
     }
 }
 ```
+
+## Seque-Based Push Notification
+
+We can't use this for a view controller that comes from a stroyboard, there is a useful trick.
+TestableViewController.swift
+```swift
+@testable import Navigation
+import UIKit
+
+class TestableViewController: ViewController {
+    var presentCallCount = 0
+    var presentArgsViewController: [UIViewController] = []
+    var presentArgsAnimated: [Bool] = []
+    var presentArgsClosure: [(() -> Void)?] = []
+    
+    override func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+        presentCallCount += 1
+        presentArgsViewController.append(viewControllerToPresent)
+        presentArgsAnimated.append(flag)
+        presentArgsClosure.append(completion)
+    }
+}
+```
+
+ViewControllerTests.swift
+```swift
+ func test_INCORREXT_tappingCodeModalButton_shouldPresentCodeNextViewController() {
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        let sut = storyboard.instantiateViewController(withIdentifier: "ViewController") as! ViewController
+        sut.loadViewIfNeeded()
+        
+        UIApplication.shared.windows.first?.rootViewController = sut
+        
+        tap(sut.codeModalButton)
+        
+        let presentedVC = sut.presentedViewController
+        guard let codeNextVC = presentedVC as? CodeNextViewController else {
+            XCTFail("Expected CodeNextViewController, "
+                    + "but was \(String(describing: presentedVC))")
+            return
+        }
+        XCTAssertEqual(codeNextVC.label.text, "Modal from code")
+    }
+```
+
